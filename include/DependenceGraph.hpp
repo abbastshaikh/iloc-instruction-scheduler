@@ -66,4 +66,4 @@ public:
     }
 };
 
-class DependenceGraph : public Graph<Operation> {};
+using DependenceGraph = Graph<Operation>;

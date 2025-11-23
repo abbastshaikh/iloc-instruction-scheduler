@@ -3,10 +3,28 @@
 #include <Operation.hpp>
 #include <unordered_map>
 #include <iostream>
+#include <queue>
+#include <vector>
 
 void Scheduler::schedule(InternalRepresentation& rep) {
+
+    // Construct dependence graph
     DependenceGraph graph = buildDependenceGraph(rep);
-    std::cout << graph.print();
+
+    // Compute priorities using maximum latency-weighted path
+    OperationPriorityQueue priorities = getPriorities(graph);
+
+    // Schedule operations based on priorities
+    std::unordered_map<int, int> schedule = scheduleOperations(priorities);
+
+    // TEMP: print outputs
+    std::cout << "Graph:\n" << graph.print() << std::endl;
+    std::cout << "Priorities:\n";
+    while (!priorities.empty()) {
+        OperationPriority op = priorities.top();
+        priorities.pop();
+        std::cout << "Operation " << op.id << ": priority " << op.priority << "\n";
+    }
 }
 
 DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& rep) {
@@ -106,4 +124,69 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
     }
 
     return graph;
+}
+
+Scheduler::OperationPriorityQueue Scheduler::getPriorities(DependenceGraph& graph) {
+
+    // Get topological order of nodes in dependence graph
+    std::unordered_map<int, int> in_degree;
+    for (const auto& [id, node] : graph.nodes) {
+        in_degree[id] = 0;
+    }
+    for (const auto& [id, node] : graph.nodes) {
+        for (const auto& edge : node->edges) {
+            in_degree[edge.to]++;
+        }
+    }
+
+    std::queue<int> queue = std::queue<int>();
+    for (const auto& [id, degree] : in_degree) {
+        if (degree == 0 && id != graph.getUndefined()) {
+            queue.push(id);
+        }
+    }
+
+    std::vector<int> topological_order = std::vector<int>();
+    while (!queue.empty()) {
+        int node_id = queue.front();
+        queue.pop();
+        topological_order.push_back(node_id);
+        for (const auto& edge : graph.nodes[node_id]->edges) {
+            in_degree[edge.to]--;
+            if (in_degree[edge.to] == 0) {
+                queue.push(edge.to);
+            }
+        }
+    }
+
+    // Initialize priorities
+    std::unordered_map<int, int> priorities;
+    for (const auto& [id, node] : graph.nodes) {
+        if (id == graph.getUndefined()) {
+            continue;
+        } else if (in_degree[id] == 0) {
+            priorities[id] = 0;
+        } else {
+            priorities[id] = -1;
+        }
+    }
+
+    // Compute priorities in topological order
+    for (int id: topological_order) {
+        for (const auto& edge : graph.nodes[id]->edges) {
+            priorities[edge.to] = std::max(priorities[edge.to], priorities[id] + edge.weight);
+        }
+    }
+
+    // Create priority queue
+    OperationPriorityQueue pq;
+    for (const auto& [id, priority] : priorities) { 
+        pq.emplace(id, priority);
+    }
+    return pq;
+}
+
+std::unordered_map<int, int> Scheduler::scheduleOperations(OperationPriorityQueue& priorities) {
+    std::unordered_map<int, int> schedule;
+    return schedule;
 }
