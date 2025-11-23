@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Operation.hpp>
 #include <unordered_map>
 #include <vector>
@@ -55,7 +57,7 @@ public:
         std::ostringstream oss;
         for (const auto& [id, node] : nodes) {
             if (id == UNDEFINED_ID) continue;
-            oss << "Node " << id << ": " << node->data.printIR() << "\n";
+            oss << "Node " << id << ": " << node->data.printVR() << "\n";
             for (const auto& edge : node->edges) {
                 oss << "  -> Node " << edge.to << " (weight " << edge.weight << ")\n";
             }

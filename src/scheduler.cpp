@@ -5,6 +5,11 @@
 #include <iostream>
 
 void Scheduler::schedule(InternalRepresentation& rep) {
+    DependenceGraph graph = buildDependenceGraph(rep);
+    std::cout << graph.print();
+}
+
+DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& rep) {
     
     // Build dependence graph
     DependenceGraph graph;
@@ -17,13 +22,6 @@ void Scheduler::schedule(InternalRepresentation& rep) {
 
         // Create a node
         int node = graph.addNode(op);
-
-        // Update last store/output
-        if (op.opcode == Opcode::STORE) {
-            lastStore = node;
-        } else if (op.opcode == Opcode::OUTPUT) {
-            lastOutput = node;
-        }
 
         // For each name defined by this operation
         Operand& o = op.op3;
@@ -92,12 +90,20 @@ void Scheduler::schedule(InternalRepresentation& rep) {
 
             // Add edges to all previous loads and outputs
             for (const auto& [id, n] : graph.nodes) {
-                if (n->data.opcode == Opcode::LOAD || n->data.opcode == Opcode::OUTPUT) {
+                if (id != graph.getUndefined() && id != node
+                    && (n->data.opcode == Opcode::LOAD || n->data.opcode == Opcode::OUTPUT)) {
                     graph.addEdge(node, id, 1);
                 }
             }
         }
+
+        // Update last store/output
+        if (op.opcode == Opcode::STORE) {
+            lastStore = node;
+        } else if (op.opcode == Opcode::OUTPUT) {
+            lastOutput = node;
+        }
     }
 
-    std::cout << graph.print();
+    return graph;
 }
