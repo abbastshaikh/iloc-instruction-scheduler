@@ -12,18 +12,16 @@ void Scheduler::schedule(InternalRepresentation& rep) {
     DependenceGraph graph = buildDependenceGraph(rep);
 
     // Compute priorities using maximum latency-weighted path
-    OperationPriorityQueue priorities = getPriorities(graph);
+    std::unordered_map<int, int> priorities = getPriorities(graph);
 
     // Schedule operations based on priorities
-    std::unordered_map<int, int> schedule = scheduleOperations(priorities);
+    // ... (scheduling logic to be implemented) ...
 
     // TEMP: print outputs
     std::cout << "Graph:\n" << graph.print() << std::endl;
     std::cout << "Priorities:\n";
-    while (!priorities.empty()) {
-        OperationPriority op = priorities.top();
-        priorities.pop();
-        std::cout << "Operation " << op.id << ": priority " << op.priority << "\n";
+    for (const auto& [id, priority] : priorities) {
+        std::cout << "Node " << id << ": Priority " << priority << std::endl;
     }
 }
 
@@ -126,7 +124,7 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
     return graph;
 }
 
-Scheduler::OperationPriorityQueue Scheduler::getPriorities(DependenceGraph& graph) {
+std::unordered_map<int, int> Scheduler::getPriorities(DependenceGraph& graph) {
 
     // Get topological order of nodes in dependence graph
     std::unordered_map<int, int> in_degree;
@@ -171,22 +169,12 @@ Scheduler::OperationPriorityQueue Scheduler::getPriorities(DependenceGraph& grap
         }
     }
 
-    // Compute priorities in topological order
+    // Compute priorities as maximum latency-weighted distance
     for (int id: topological_order) {
         for (const auto& edge : graph.nodes[id]->edges) {
             priorities[edge.to] = std::max(priorities[edge.to], priorities[id] + edge.weight);
         }
     }
 
-    // Create priority queue
-    OperationPriorityQueue pq;
-    for (const auto& [id, priority] : priorities) { 
-        pq.emplace(id, priority);
-    }
-    return pq;
-}
-
-std::unordered_map<int, int> Scheduler::scheduleOperations(OperationPriorityQueue& priorities) {
-    std::unordered_map<int, int> schedule;
-    return schedule;
+    return priorities;
 }

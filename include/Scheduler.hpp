@@ -19,13 +19,12 @@ public:
             return p1.priority < p2.priority;
         }  
     };
-    
+
     using OperationPriorityQueue = std::priority_queue<OperationPriority, std::vector<OperationPriority>, CompareOperation>;
 
     void schedule (InternalRepresentation& rep);
 
 private:
     DependenceGraph buildDependenceGraph (const InternalRepresentation& rep);
-    OperationPriorityQueue getPriorities(DependenceGraph& graph);
-    std::unordered_map<int, int> scheduleOperations(OperationPriorityQueue& priorities);
+    std::unordered_map<int, int> getPriorities(DependenceGraph& graph);
 };
