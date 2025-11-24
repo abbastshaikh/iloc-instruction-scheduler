@@ -14,7 +14,7 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
     // Compute priorities using maximum latency-weighted path
     std::unordered_map<int, int> priorities = getPriorities(graph);
 
-    // // TEMP: print outputs
+    // TEMP: print outputs
     // std::cout << "Graph:\n" << graph.print() << std::endl;
     // std::cout << "Priorities:\n";
     // for (const auto& [id, priority] : priorities) {
@@ -61,6 +61,12 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         // std::cout << "Scheduled Cycles:" << std::endl;
         // for (std::pair<Operation, Operation> c : schedule.cycles) {
         //     std::cout << c.first.printVR() << " | " << c.second.printVR() << std::endl;
+        // }
+        // std::cout << "Dependencies: ";
+        // for (const auto& [id, dep] : dependencies) {
+        //     if (id != graph.getUndefined()) {
+        //         std::cout << "Node " << id << ": " << dep << " ";
+        //     }
         // }
         // std::cout << std::endl;
 
@@ -133,9 +139,19 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         // Insert operations into active set and schedule
         Operation op0, op1;
         if (f0 != -1) { 
+
+            // Mark operation as scheduled and active
             scheduledCycle[f0] = cycle;
             active.insert(f0);
             graph.nodes[f0]->data.status = Status::ACTIVE;
+
+            // Adjust dependencies of dependent operations
+            for (const auto& edge : graph.nodes[f0]->inEdges) {
+                if (edge.weight == 1){
+                    dependencies[edge.to]--;
+                }
+            }
+
             op0 = graph.nodes[f0]->data.op;
             
         } else {
@@ -143,9 +159,18 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         }
 
         if (f1 != -1) { 
+
+            // Mark operation as scheduled and active
             scheduledCycle[f1] = cycle; 
             active.insert(f1); 
             graph.nodes[f1]->data.status = Status::ACTIVE;
+
+            // Adjust dependencies of dependent operations
+            for (const auto& edge : graph.nodes[f1]->inEdges) {
+                if (edge.weight == 1){
+                    dependencies[edge.to]--;
+                }
+            }
             op1 = graph.nodes[f1]->data.op;
         } else {
             op1 = {Opcode::NOP, {}, {}, {}};
@@ -167,7 +192,14 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
 
                 // Remove it from the active set
                 it = active.erase(it);
+                
+                // Adjust status and dependencies of dependent operations
                 graph.nodes[id]->data.status = Status::RETIRED;
+                for (const auto& edge : graph.nodes[id]->inEdges) {
+                    if (edge.weight > 1){
+                        dependencies[edge.to]--;
+                    }
+                }  
 
                 // For each operation dependent on this one
                 for (const auto& inEdge : graph.nodes[id]->inEdges) {
@@ -176,14 +208,7 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
                     if (graph.nodes[inEdge.to]->data.status == Status::NOT_READY) {
 
                         // If all dependencies are satisfied, add to ready queue
-                        bool isReady = true;
-                        for (const auto& outEdge : graph.nodes[inEdge.to]->outEdges) {
-                            if (graph.nodes[outEdge.to]->data.status != Status::RETIRED) {
-                                isReady = false;
-                                break;
-                            }
-                        }
-                        if (isReady) {
+                        if (dependencies[inEdge.to] == 0) {
                             ready.push({inEdge.to, priorities[inEdge.to]});
                             graph.nodes[inEdge.to]->data.status = Status::READY;
                         }
@@ -193,12 +218,9 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
 
             // The operation is an active multi-cycle operation
             else {
-
-                // Next iteration
                 ++it;
             }
         }
-        
     }
 
     return schedule;
@@ -257,7 +279,7 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
             }
 
             // Add edge to graph
-            graph.addEdge(node, defs[o->VR], Latency[(int) op.opcode]);
+            graph.addEdge(node, defs[o->VR], Latency[(int) graph.nodes[defs[o->VR]]->data.op.opcode]);
         }
 
         // Add conflict edges for loads

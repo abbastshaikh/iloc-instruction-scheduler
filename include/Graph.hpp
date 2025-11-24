@@ -27,9 +27,9 @@ public:
 
 private:
     int nextId;
-    static constexpr int UNDEFINED_ID = -1;
-
+    
 public:
+    static constexpr int UNDEFINED_ID = -1;
     std::unordered_map<int, std::unique_ptr<Node>> nodes;
     
     Graph() : nextId(1) {
@@ -53,21 +53,6 @@ public:
         nodes[from]->outEdges.emplace_back(to, weight);
         nodes[to]->inEdges.emplace_back(from, weight);
         return true;
-    }
-
-    std::string print() const {
-        std::ostringstream oss;
-        for (const auto& [id, node] : nodes) {
-            if (id == UNDEFINED_ID) continue;
-            oss << "Node " << id << ": " << node->data.printVR() << "\n";
-            for (const auto& edge : node->outEdges) {
-                oss << "  -> Node " << edge.to << " (weight " << edge.weight << ")\n";
-            }
-            for (const auto& edge : node->inEdges) {
-                oss << "  <- Node " << edge.to << " (weight " << edge.weight << ")\n";
-            }
-        }
-        return oss.str();
     }
 };
 

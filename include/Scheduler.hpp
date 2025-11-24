@@ -19,10 +19,26 @@ enum class Status {
 
 struct OperationData {
     Operation op;
-    Status status; // e.g., scheduled, completed, etc.
+    Status status;
 };
 
-using DependenceGraph = Graph<OperationData>;
+class DependenceGraph : public Graph<OperationData> {
+public:
+    std::string print() const {
+        std::ostringstream oss;
+        for (const auto& [id, node] : nodes) {
+            if (id == UNDEFINED_ID) continue;
+            oss << "Node " << id << ": " << node->data.op.printVR() << "\n";
+            for (const auto& edge : node->outEdges) {
+                oss << "  -> Node " << edge.to << " (weight " << edge.weight << ")\n";
+            }
+            for (const auto& edge : node->inEdges) {
+                oss << "  <- Node " << edge.to << " (weight " << edge.weight << ")\n";
+            }
+        }
+        return oss.str();
+    }
+};
 
 class Scheduler {
 public:
