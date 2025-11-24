@@ -4,6 +4,7 @@
 #include <Scheduler.hpp>
 #include <iostream>
 #include <cstring>
+#include <ctime>
 
 void help () {
    std::cout << "Command Syntax: schedule [-h] [<name>]" << std::endl;
@@ -18,10 +19,12 @@ void schedule (std::string filename) {
       Scanner scanner (filename);
 
       try {
+
          Parser parser (scanner);
          InternalRepresentation rep = parser.parse();
 
          try {
+
             Renamer renamer;
             renamer.rename(rep);
 
@@ -32,6 +35,7 @@ void schedule (std::string filename) {
             for (const auto& cycle : schedule.cycles) {
                std::cout << "[ " << cycle.first.printVR() << " ; " << cycle.second.printVR() << " ]" << std::endl;
             }
+            
          } catch (RenamingFailedException& e) {
             std::cerr << "ERROR: " << e.what() << std::endl;
          }

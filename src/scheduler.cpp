@@ -262,90 +262,84 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
     int lastOutput = -1;
 
     // For each operation
-    for (Operation op : rep.operations) {
+    for (const auto& op : rep.operations) {
 
         // Create a node
         int node = graph.addNode({op, Status::NOT_READY});
 
         // For each name defined by this operation
-        Operand& o = op.op3;
+        Operand o = op.op3;
         if (op.opcode != Opcode::STORE && o.VR != -1) {
             
             // Add node to defs
             defs[o.VR] = node;
         }
+
+        // Function to process uses
+        auto processUse = [&] (Operand o) {
+            if (defs.find(o.VR) == defs.end()) {
+                defs[o.VR] = graph.getUndefined();
+            }
+            graph.addEdge(node, defs[o.VR], Latency[(int) graph.nodes[defs[o.VR]]->data.op.opcode]);
+        };
         
-        // Gather uses
-        std::vector<Operand*> uses;
+        // For each name used by this operation:
         switch (op.opcode) {
             case Opcode::LOAD:
-                uses.push_back(&op.op1);
+                processUse(op.op1);
                 break;
             case Opcode::STORE:
-                uses.push_back(&op.op1);
-                uses.push_back(&op.op3);
+                processUse(op.op1);
+                processUse(op.op3);
                 break;
             case Opcode::ADD:
             case Opcode::SUB:
             case Opcode::MULT:
             case Opcode::LSHIFT:
             case Opcode::RSHIFT:
-                uses.push_back(&op.op1);
-                uses.push_back(&op.op2);
+                processUse(op.op1);
+                processUse(op.op2);
                 break;
             default:
                 break;
         }
 
-        // For each name used by this operation
-        for (Operand* o: uses) {
-            
-            // If use is undefined
-            if (defs.find(o->VR) == defs.end()) {
-                defs[o->VR] = graph.getUndefined();
-            }
-
-            // Add edge to graph
-            graph.addEdge(node, defs[o->VR], Latency[(int) graph.nodes[defs[o->VR]]->data.op.opcode]);
-        }
-
-        // Add conflict edges for loads
-        if (op.opcode == Opcode::LOAD) {
-            if (lastStore != -1) { 
-                graph.addEdge(node, lastStore, Latency[(int) Opcode::STORE]);
-            }
+        // Add conflict edges for load to last store
+        if (op.opcode == Opcode::LOAD && lastStore != -1) {
+            graph.addEdge(node, lastStore, Latency[(int) Opcode::STORE]);
         }
 
         // Add conflict and serialization edges for outputs
-        if (op.opcode == Opcode::OUTPUT) {
+        else if (op.opcode == Opcode::OUTPUT) {
+
+            // Conflict edge to last store
             if (lastStore != -1) { 
                 graph.addEdge(node, lastStore, Latency[(int) Opcode::STORE]);
             } 
+
+            // Serialization edge to last output
             if (lastOutput != -1) { 
                 graph.addEdge(node, lastOutput, 1);
             }
+            lastOutput = node; // Update last output
         }
 
         // Add serialization edges for stores
-        if (op.opcode == Opcode::STORE) {
+        else if (op.opcode == Opcode::STORE) {
+
+            // Edge to last store
             if (lastStore != -1) {
                 graph.addEdge(node, lastStore, 1);
             }
+            lastStore = node; // Update last store
 
-            // Add edges to all previous loads and outputs
+            // Edges to all previous loads and outputs
             for (const auto& [id, n] : graph.nodes) {
                 if (id != graph.getUndefined()
                 && (n->data.op.opcode == Opcode::LOAD || n->data.op.opcode == Opcode::OUTPUT)) {
                     graph.addEdge(node, id, 1);
                 }
             }
-        }
-
-        // Update last store/output
-        if (op.opcode == Opcode::STORE) {
-            lastStore = node;
-        } else if (op.opcode == Opcode::OUTPUT) {
-            lastOutput = node;
         }
     }
 
@@ -354,19 +348,23 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
 
 std::unordered_map<int, int> Scheduler::getPriorities(DependenceGraph& graph) {
 
-    // Get topological order of nodes in dependence graph
-    std::unordered_map<int, int> in_degree;
-    for (const auto& [id, node] : graph.nodes) {
-        in_degree[id] = node->inEdges.size();
-    }
+    std::unordered_map<int, int> priorities;
 
+    /* Get topological order of nodes in dependence graph */ 
+
+    // Initialize queue with nodes of in-degree 0 (priority 0)
+    std::unordered_map<int, int> in_degree;
     std::queue<int> queue = std::queue<int>();
-    for (const auto& [id, degree] : in_degree) {
+    for (const auto& [id, node] : graph.nodes) {
+        int degree = node->inEdges.size();
+        in_degree[id] = degree;
         if (degree == 0 && id != graph.getUndefined()) {
             queue.push(id);
+            priorities[id] = 0;
         }
     }
 
+    // Perform topological sort
     std::vector<int> topological_order = std::vector<int>();
     while (!queue.empty()) {
         int node_id = queue.front();
@@ -380,19 +378,7 @@ std::unordered_map<int, int> Scheduler::getPriorities(DependenceGraph& graph) {
         }
     }
 
-    // Initialize priorities
-    std::unordered_map<int, int> priorities;
-    for (const auto& [id, node] : graph.nodes) {
-        if (id == graph.getUndefined()) {
-            continue;
-        } else if (in_degree[id] == 0) {
-            priorities[id] = 0;
-        } else {
-            priorities[id] = -1;
-        }
-    }
-
-    // Compute priorities as maximum latency-weighted distance
+    /* Compute priorities as maximum latency-weighted distance */
     for (int id: topological_order) {
         for (const auto& edge : graph.nodes[id]->outEdges) {
             priorities[edge.to] = std::max(priorities[edge.to], priorities[id] + edge.weight);

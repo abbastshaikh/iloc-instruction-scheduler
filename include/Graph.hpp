@@ -46,13 +46,9 @@ public:
         return id;
     }
     
-    bool addEdge(int from, int to, int weight) {
-        if (nodes.find(from) == nodes.end() || nodes.find(to) == nodes.end()) {
-            return false;
-        }
+    void addEdge(int from, int to, int weight) {
         nodes[from]->outEdges.emplace_back(to, weight);
         nodes[to]->inEdges.emplace_back(from, weight);
-        return true;
     }
 };
 

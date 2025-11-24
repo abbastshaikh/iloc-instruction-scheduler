@@ -1,10 +1,10 @@
 #pragma once
 
 #include <Operation.hpp>
-#include <list>
+#include <vector>
 
 struct InternalRepresentation {
-    std::list<Operation> operations;
+    std::vector<Operation> operations;
     int maxSR = -1;
     int maxVR = -1;
     int maxLive = -1;
