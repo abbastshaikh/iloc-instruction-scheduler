@@ -71,4 +71,3 @@ public:
     }
 };
 
-using DependenceGraph = Graph<Operation>;

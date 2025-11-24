@@ -1,5 +1,4 @@
 #include <Scheduler.hpp>
-#include <DependenceGraph.hpp>
 #include <Operation.hpp>
 #include <unordered_map>
 #include <unordered_set>
@@ -24,13 +23,17 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
 
     int cycle = 1;
     std::unordered_set<int> active;
-    std::unordered_set<int> completed;
-    OperationPriorityQueue ready;
+    std::unordered_map<int, int> dependencies;
+    for (const auto& [id, node] : graph.nodes) {
+        dependencies[id] = node->outEdges.size();
+    }
 
     // Add leaves to ready queue
+    OperationPriorityQueue ready;
     for (const auto& [id, node] : graph.nodes) {
         if (node->outEdges.empty() && id != graph.getUndefined()) {
             ready.push({id, priorities[id]});
+            graph.nodes[id]->data.status = Status::READY;
         }
     }
 
@@ -77,13 +80,13 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
             OperationPriority op = ready.top();
             ready.pop();
 
-            Opcode opcode = graph.nodes[op.id]->data.opcode;
+            Opcode opcode = graph.nodes[op.id]->data.op.opcode;
 
             // Use functional unit f0 for LOAD and STORE
             if (opcode == Opcode::LOAD || opcode == Opcode::STORE) {
                 if (f0 == -1) {
                     f0 = op.id;   
-                } else if (f1 == -1 && graph.nodes[f0]->data.opcode != Opcode::LOAD && graph.nodes[f0]->data.opcode != Opcode::STORE){
+                } else if (f1 == -1 && graph.nodes[f0]->data.op.opcode != Opcode::LOAD && graph.nodes[f0]->data.op.opcode != Opcode::STORE){
                     f1 = f0;
                     f0 = op.id;
                 } else {
@@ -95,7 +98,7 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
             else if (opcode == Opcode::MULT) {
                 if (f1 == -1) {
                     f1 = op.id;
-                } else if (f0 == -1 && graph.nodes[f1]->data.opcode != Opcode::MULT) {
+                } else if (f0 == -1 && graph.nodes[f1]->data.op.opcode != Opcode::MULT) {
                     f0 = f1;
                     f1 = op.id;
                 } else {
@@ -132,7 +135,9 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         if (f0 != -1) { 
             scheduledCycle[f0] = cycle;
             active.insert(f0);
-            op0 = graph.nodes[f0]->data;
+            graph.nodes[f0]->data.status = Status::ACTIVE;
+            op0 = graph.nodes[f0]->data.op;
+            
         } else {
             op0 = {Opcode::NOP, {}, {}, {}};
         }
@@ -140,7 +145,8 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         if (f1 != -1) { 
             scheduledCycle[f1] = cycle; 
             active.insert(f1); 
-            op1 = graph.nodes[f1]->data;
+            graph.nodes[f1]->data.status = Status::ACTIVE;
+            op1 = graph.nodes[f1]->data.op;
         } else {
             op1 = {Opcode::NOP, {}, {}, {}};
         }
@@ -154,31 +160,32 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
         // For each active operation
         for (auto it = active.begin(); it != active.end(); ) {
             int id = *it;
-            Opcode opcode = graph.nodes[id]->data.opcode;
+            Opcode opcode = graph.nodes[id]->data.op.opcode;
 
             // If the operation has completed:
             if (scheduledCycle[id] + Latency[(int) opcode] <= cycle) {
 
                 // Remove it from the active set
                 it = active.erase(it);
-                completed.insert(id);
+                graph.nodes[id]->data.status = Status::RETIRED;
 
                 // For each operation dependent on this one
                 for (const auto& inEdge : graph.nodes[id]->inEdges) {
 
-                    // If the operation has not yet been scheduled
-                    if (completed.find(inEdge.to) == completed.end() && active.find(inEdge.to) == active.end()) {
+                    // If the operation has not yet been handled
+                    if (graph.nodes[inEdge.to]->data.status == Status::NOT_READY) {
 
                         // If all dependencies are satisfied, add to ready queue
                         bool isReady = true;
                         for (const auto& outEdge : graph.nodes[inEdge.to]->outEdges) {
-                            if (completed.find(outEdge.to) == completed.end()) {
+                            if (graph.nodes[outEdge.to]->data.status != Status::RETIRED) {
                                 isReady = false;
                                 break;
                             }
                         }
                         if (isReady) {
                             ready.push({inEdge.to, priorities[inEdge.to]});
+                            graph.nodes[inEdge.to]->data.status = Status::READY;
                         }
                     }
                 }  
@@ -191,8 +198,6 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
                 ++it;
             }
         }
-
-        // For each multi-cycle operation
         
     }
 
@@ -211,7 +216,7 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
     for (Operation op : rep.operations) {
 
         // Create a node
-        int node = graph.addNode(op);
+        int node = graph.addNode({op, Status::NOT_READY});
 
         // For each name defined by this operation
         Operand& o = op.op3;
@@ -281,7 +286,7 @@ DependenceGraph Scheduler::buildDependenceGraph(const InternalRepresentation& re
             // Add edges to all previous loads and outputs
             for (const auto& [id, n] : graph.nodes) {
                 if (id != graph.getUndefined() && id != node
-                && (n->data.opcode == Opcode::LOAD || n->data.opcode == Opcode::OUTPUT)) {
+                && (n->data.op.opcode == Opcode::LOAD || n->data.op.opcode == Opcode::OUTPUT)) {
 
                     // Don't add duplicate edges
                     bool hasEdge = false;

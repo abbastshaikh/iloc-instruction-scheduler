@@ -1,7 +1,7 @@
 #pragma once
 
 #include <InternalRepresentation.hpp>
-#include <DependenceGraph.hpp>
+#include <Graph.hpp>
 #include <unordered_map>
 #include <queue>
 #include <list>
@@ -9,6 +9,20 @@
 struct Schedule {
     std::list<std::pair<Operation, Operation>> cycles;
 };
+
+enum class Status {
+    NOT_READY,
+    READY,
+    ACTIVE,
+    RETIRED
+};
+
+struct OperationData {
+    Operation op;
+    Status status; // e.g., scheduled, completed, etc.
+};
+
+using DependenceGraph = Graph<OperationData>;
 
 class Scheduler {
 public:
