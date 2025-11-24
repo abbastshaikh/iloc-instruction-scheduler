@@ -4,6 +4,11 @@
 #include <DependenceGraph.hpp>
 #include <unordered_map>
 #include <queue>
+#include <list>
+
+struct Schedule {
+    std::list<std::pair<Operation, Operation>> cycles;
+};
 
 class Scheduler {
 public:
@@ -22,7 +27,7 @@ public:
 
     using OperationPriorityQueue = std::priority_queue<OperationPriority, std::vector<OperationPriority>, CompareOperation>;
 
-    void schedule (InternalRepresentation& rep);
+    Schedule schedule (InternalRepresentation& rep);
 
 private:
     DependenceGraph buildDependenceGraph (const InternalRepresentation& rep);

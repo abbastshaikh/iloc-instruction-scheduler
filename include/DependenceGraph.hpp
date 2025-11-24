@@ -19,7 +19,8 @@ public:
     struct Node {
         int id;
         T data;
-        std::vector<Edge> edges;
+        std::vector<Edge> inEdges;
+        std::vector<Edge> outEdges;
         
         Node(int id, const T& data) : id(id), data(data) {}
     };
@@ -49,7 +50,8 @@ public:
         if (nodes.find(from) == nodes.end() || nodes.find(to) == nodes.end()) {
             return false;
         }
-        nodes[from]->edges.emplace_back(to, weight);
+        nodes[from]->outEdges.emplace_back(to, weight);
+        nodes[to]->inEdges.emplace_back(from, weight);
         return true;
     }
 
@@ -58,8 +60,11 @@ public:
         for (const auto& [id, node] : nodes) {
             if (id == UNDEFINED_ID) continue;
             oss << "Node " << id << ": " << node->data.printVR() << "\n";
-            for (const auto& edge : node->edges) {
+            for (const auto& edge : node->outEdges) {
                 oss << "  -> Node " << edge.to << " (weight " << edge.weight << ")\n";
+            }
+            for (const auto& edge : node->inEdges) {
+                oss << "  <- Node " << edge.to << " (weight " << edge.weight << ")\n";
             }
         }
         return oss.str();

@@ -17,7 +17,7 @@ struct Operation {
     Operand op2;
     Operand op3;
 
-    std::string printIR () {
+    std::string printIR() const {
         switch (this->opcode) {
             case Opcode::LOAD: 
             case Opcode::STORE: 
@@ -39,7 +39,7 @@ struct Operation {
         }
     }
 
-    std::string printVR () {
+    std::string printVR() const {
         switch (this->opcode) {
             case Opcode::LOAD: 
             case Opcode::STORE: 
@@ -61,7 +61,7 @@ struct Operation {
         }
     }
 
-    std::string printPR () {
+    std::string printPR() const {
         switch (this->opcode) {
             case Opcode::LOAD: 
             case Opcode::STORE: 

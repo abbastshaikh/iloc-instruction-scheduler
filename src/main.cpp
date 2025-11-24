@@ -26,10 +26,12 @@ void schedule (std::string filename) {
             renamer.rename(rep);
 
             Scheduler scheduler;
-            scheduler.schedule(rep);
+            Schedule schedule = scheduler.schedule(rep);
 
             // Print output
-
+            for (const auto& cycle : schedule.cycles) {
+               std::cout << "[ " << cycle.first.printVR() << " ; " << cycle.second.printVR() << " ]" << std::endl;
+            }
          } catch (RenamingFailedException& e) {
             std::cerr << "ERROR: " << e.what() << std::endl;
          }
