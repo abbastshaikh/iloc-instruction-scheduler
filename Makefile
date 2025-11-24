@@ -1,5 +1,5 @@
 CXX   := g++
-FLAGS := -std=c++17 -Wall -Iinclude
+FLAGS := -O3 -std=c++17 -Wall -Iinclude
 
 SRC := src/main.cpp src/scanner.cpp src/parser.cpp src/renamer.cpp src/scheduler.cpp
 OBJ := $(SRC:src/%.cpp=build/%.o)
