@@ -14,19 +14,15 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
     // Compute priorities using maximum latency-weighted path
     std::unordered_map<int, int> priorities = getPriorities(graph);
 
-    // // TEMP: print outputs
-    // std::cout << "Graph:\n" << graph.print() << std::endl;
-    // std::cout << "Priorities:\n";
-    // for (const auto& [id, priority] : priorities) {
-    //     std::cout << "Node " << id << ": Priority " << priority << std::endl;
-    // }
-
+    // Initialize scheduling variables
     int cycle = 1;
     std::unordered_set<int> active;
     std::unordered_map<int, int> dependencies;
     for (const auto& [id, node] : graph.nodes) {
         dependencies[id] = node->outEdges.size();
     }
+    std::unordered_map<int, int> scheduledCycle;
+    Schedule schedule;
 
     // Initialize ready queue
     OperationPriorityQueue ready;
@@ -38,37 +34,7 @@ Schedule Scheduler::schedule(InternalRepresentation& rep) {
     }
 
     // Schedule operations based on priorities
-    std::unordered_map<int, int> scheduledCycle;
-    Schedule schedule;
     while (!ready.empty() || !active.empty()) {
-
-        // // TEMP: print current state
-        // std::cout << "Cycle " << cycle << std::endl;
-        // std::cout << "Active Set: ";
-        // for (int id : active) {
-        //     std::cout << id << " ";
-        // }
-        // std::cout << std::endl;
-        // std::cout << "Ready Queue: ";
-        // OperationPriorityQueue tempReady = ready;
-        // while (!tempReady.empty()) {
-        //     OperationPriority op = tempReady.top();
-        //     tempReady.pop();
-        //     std::cout << op.id << "(" << op.priority << ") ";
-        // }
-        // std::cout << (ready.empty() ? "empty" : "");
-        // std::cout << std::endl;
-        // std::cout << "Scheduled Cycles:" << std::endl;
-        // for (std::pair<Operation, Operation> c : schedule.cycles) {
-        //     std::cout << c.first.printVR() << " | " << c.second.printVR() << std::endl;
-        // }
-        // std::cout << "Dependencies: ";
-        // for (const auto& [id, dep] : dependencies) {
-        //     if (id != graph.getUndefined()) {
-        //         std::cout << "Node " << id << ": " << dep << " ";
-        //     }
-        // }
-        // std::cout << std::endl;
 
         // Pick an operation for each functional unit
         int f0 = -1, f1 = -1;

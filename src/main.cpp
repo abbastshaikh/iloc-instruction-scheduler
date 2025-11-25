@@ -4,7 +4,6 @@
 #include <Scheduler.hpp>
 #include <iostream>
 #include <cstring>
-#include <ctime>
 
 void help () {
    std::cout << "Command Syntax: schedule [-h] [<name>]" << std::endl;

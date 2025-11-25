@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Opcode.hpp>
 #include <string>
 #include <stdexcept>
-#include <Opcode.hpp>
 
 enum class Category: int {
     CAT_MEMOP = 0,

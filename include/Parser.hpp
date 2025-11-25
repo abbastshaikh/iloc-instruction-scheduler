@@ -4,7 +4,6 @@
 #include <InternalRepresentation.hpp>
 #include <string>
 #include <exception>
-#include <list>
 
 class InvalidTokenException : public std::exception {
 public:

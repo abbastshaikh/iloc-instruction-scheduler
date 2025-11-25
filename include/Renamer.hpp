@@ -1,8 +1,8 @@
 #pragma once
 
 #include <InternalRepresentation.hpp>
-#include <exception>
 #include <string>
+#include <exception>
 
 class RenamingFailedException : public std::exception {
 public:

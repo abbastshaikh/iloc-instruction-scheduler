@@ -1,7 +1,8 @@
 #pragma once
+
+#include <Token.hpp>
 #include <unordered_set>
 #include <map>
-#include <Token.hpp>
 
 class TransitionTable{
 private: 

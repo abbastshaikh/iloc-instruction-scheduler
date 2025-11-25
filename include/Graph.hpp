@@ -1,10 +1,8 @@
 #pragma once
 
-#include <Operation.hpp>
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include <sstream>
 
 template<typename T>
 class Graph {
