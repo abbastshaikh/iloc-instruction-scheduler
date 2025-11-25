@@ -1,6 +1,3 @@
-//NAME: Abbas Shaikh
-//NETID: ats16
-
 This program provides an implementation of an ILOC instruction scheduler.
 
 To build this program, run `make build`. This will generate an executable, schedule, which can be used to run the ILOC instruction scheduler.
